@@ -1,0 +1,23 @@
+
+void InitTarget(void) {
+  Report("J-Link script Roman M.");
+  //if(JLINK_ExecCommand("SetResetType = 3") < 0)
+  //{
+  //  Report("SetResetType failed!");
+  //}
+  //else
+  //{
+  //  Report("SetResetType SUCCEED!");
+  //}
+
+  if(JLINK_ExecCommand("ExcludeFlashCacheRange 0x08005800-0x08006000") < 0)
+  {
+    Report("ExcludeFlashCacheRange failed!!!");
+  }
+  else
+  {
+    Report("ExcludeFlashCacheRange SUCCEED!!!");
+  }
+}
+
+/*************************** end of file ****************************/
