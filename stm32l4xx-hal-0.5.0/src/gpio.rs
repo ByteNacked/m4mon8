@@ -14,6 +14,7 @@ pub trait GpioExt {
 
     /// Splits the GPIO block into independent pins and registers
     fn split(self, ahb: &mut AHB2) -> Self::Parts;
+    unsafe fn steal(self) -> Self::Parts;
 }
 
 /// Input mode (type state)
@@ -174,6 +175,19 @@ macro_rules! gpio {
                     ahb.rstr().modify(|_, w| w.$iopxrst().set_bit());
                     ahb.rstr().modify(|_, w| w.$iopxrst().clear_bit());
 
+                    Parts {
+                        afrh: AFRH { _0: () },
+                        afrl: AFRL { _0: () },
+                        moder: MODER { _0: () },
+                        otyper: OTYPER { _0: () },
+                        pupdr: PUPDR { _0: () },
+                        $(
+                            $pxi: $PXi { _mode: PhantomData },
+                        )+
+                    }
+                }
+
+                unsafe fn steal(self) -> Parts {
                     Parts {
                         afrh: AFRH { _0: () },
                         afrl: AFRL { _0: () },
@@ -420,6 +434,29 @@ macro_rules! gpio {
                     ) -> $PXi<Alternate<AF9, Output<PushPull>>> {
                         let od = self.into_push_pull_output(moder, otyper);
                         od.into_af9(moder, afr)
+                    }
+
+
+                    /// Configures the pin to operate as usb dm
+                    pub fn into_usb_dm(
+                        self,
+                        moder: &mut MODER,
+                        pupdr: &mut PUPDR,
+                        afr: &mut $AFR,
+                    ) -> $PXi<Alternate<AF10, Input<Floating>>> {
+                        let od = self.into_floating_input(moder, pupdr);
+                        od.into_af10(moder, afr)
+                    }
+
+                    /// Configures the pin to operate as usb dp
+                    pub fn into_usb_dp(
+                        self,
+                        moder: &mut MODER,
+                        pupdr: &mut PUPDR,
+                        afr: &mut $AFR,
+                    ) -> $PXi<Alternate<AF10, Input<Floating>>> {
+                        let od = self.into_floating_input(moder, pupdr);
+                        od.into_af10(moder, afr)
                     }
                 }
 

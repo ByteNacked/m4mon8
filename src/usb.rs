@@ -3,9 +3,9 @@ mod monitor;
 use cortex_m::asm::delay;
 use embedded_hal::digital::v2::OutputPin;
 use stm32_usbd::{UsbBus, UsbBusType};
-use stm32f1xx_hal::pac::Peripherals;
-use stm32f1xx_hal::stm32::{interrupt, Interrupt};
-use stm32f1xx_hal::{gpio::gpioa, gpio::gpioc, prelude::*, rcc::Clocks};
+use crate::pac::Peripherals;
+use crate::stm32::{interrupt, Interrupt};
+use stm32l4xx_hal::{gpio::gpioa, gpio::gpioc, prelude::*, rcc::Clocks, gpio::GpioExt};
 use usb_device::{bus::UsbBusAllocator, prelude::*};
 
 static mut USB_BUS: Option<UsbBusAllocator<UsbBusType>> = None;
@@ -15,23 +15,26 @@ const VID: u16 = 0x0483;
 const PID: u16 = 0x7503;
 
 pub fn usb_init(clocks: &Clocks) -> () {
-    assert!(clocks.usbclk_valid());
+    ///assert!(clocks.usbclk_valid());
 
     let p = unsafe { cortex_m::Peripherals::steal() };
     let dp = unsafe { Peripherals::steal() };
 
     let mut gpioa = unsafe { dp.GPIOA.steal() };
-    let mut gpioc = unsafe { dp.GPIOC.steal() };
+    //let mut gpioc = unsafe { dp.GPIOC.steal() };
 
-    let mut usb_pw = gpioc.pc2.into_push_pull_output(&mut gpioc.crl);
-    let usb_dp = gpioa.pa12.into_push_pull_output(&mut gpioa.crh);
-    let _ = usb_pw.set_high();
-    //usb_dp.set_low();
-    delay(clocks.sysclk().0 / 100);
-    let _ = usb_pw.set_low();
+    //let mut usb_pw = gpioc.pc2.into_push_pull_output(&mut gpioc.crl);
+    //let usb_dp = gpioa.pa12.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper);
+    //let _ = usb_pw.set_high();
+    ////usb_dp.set_low();
+    //delay(clocks.sysclk().0 / 100);
+    //let _ = usb_pw.set_low();
 
+    let usb_dp = gpioa.pa12;
     let usb_dm = gpioa.pa11;
-    let usb_dp = usb_dp.into_floating_input(&mut gpioa.crh);
+    //let usb_dp = usb_dp.into_floating_input(&mut gpioa.moder, &mut gpioa.pupdr);
+    let usb_dp = usb_dp.into_usb_dp(&mut gpioa.moder, &mut gpioa.pupdr, &mut gpioa.afrh);
+    let usb_dm = usb_dm.into_usb_dm(&mut gpioa.moder, &mut gpioa.pupdr, &mut gpioa.afrh);
 
     unsafe {
         let bus = UsbBus::new(dp.USB, (usb_dm, usb_dp));
@@ -52,23 +55,23 @@ pub fn usb_init(clocks: &Clocks) -> () {
 
     let mut nvic = p.NVIC;
 
-    nvic.enable(Interrupt::USB_HP_CAN_TX);
-    nvic.enable(Interrupt::USB_LP_CAN_RX0)
+    nvic.enable(Interrupt::SAI1);
+    //nvic.enable(Interrupt::USB_LP_CAN_RX0)
 }
 
 #[interrupt]
-fn USB_HP_CAN_TX() {
+fn SAI1() {
     usb_interrupt();
 }
 
-#[interrupt]
-fn USB_LP_CAN_RX0() {
-    usb_interrupt();
-}
+//#[interrupt]
+//fn USB_LP_CAN_RX0() {
+//    usb_interrupt();
+//}
 
 static mut USB_IRQ_CNT: u32 = 0;
 static mut CMD_PROC: ellocopo::Processor = ellocopo::Processor::new();
-fn usb_interrupt() {
+pub fn usb_interrupt() {
     unsafe {
         USB_IRQ_CNT += 1;
     }
@@ -79,25 +82,25 @@ fn usb_interrupt() {
         return;
     }
 
-    let mut buf = [0u8; 0x40];
+    //let mut buf = [0u8; 0x40];
 
-    match monitor.read(&mut buf) {
-        Ok(count) if count > 0 => {
-            let p = unsafe { &mut CMD_PROC };
-            let count = match p.process_try_answer(&mut buf, count) {
-                Ok(c) => c,
-                Err(_) => panic!(),
-            };
-            monitor.write(&buf[0..count]).ok();
-        }
-        _ => {}
-    }
+    //match monitor.read(&mut buf) {
+    //    Ok(count) if count > 0 => {
+    //        let p = unsafe { &mut CMD_PROC };
+    //        let count = match p.process_try_answer(&mut buf, count) {
+    //            Ok(c) => c,
+    //            Err(_) => panic!(),
+    //        };
+    //        monitor.write(&buf[0..count]).ok();
+    //    }
+    //    _ => {}
+    //}
 
-    use crate::VB;
-    match unsafe { VB.dequeue_slice(&mut buf) } {
-        n => {
-            let _ = monitor.vis(&buf[..n]);
-        }
-    }
+    //use crate::VB;
+    //match unsafe { VB.dequeue_slice(&mut buf) } {
+    //    n => {
+    //        let _ = monitor.vis(&buf[..n]);
+    //    }
+    //}
 
 }

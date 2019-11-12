@@ -32,7 +32,7 @@ mod dynbox;
 //mod sche;
 //mod splash;
 //mod tps;
-//mod usb;
+mod usb;
 //mod cb;
 
 use core::fmt::Binary;
@@ -96,7 +96,13 @@ const APP: () = {
         let dp = pac::Peripherals::take().unwrap();
         let mut rcc = dp.RCC.constrain();
         let mut flash = dp.FLASH.constrain();
-        //let clocks = rcc.cfgr.freeze_72Mhz_usb(&mut flash.acr);
+        let clocks = rcc.cfgr
+            .sysclk(64.mhz())
+            .hsi48(true)
+            .freeze(&mut flash.acr);
+
+        usb::usb_init(&clocks);
+
         ////let mut nvic = cp.NVIC;
 
         //let _mono_timer = time::MonoTimer::new(cp.DWT, clocks);
@@ -131,9 +137,10 @@ const APP: () = {
     fn idle(_cx: idle::Context) -> ! {
 
         loop {
-            rtt_print!("IDLE");
-            use crate::pac::DWT;
-            busy_wait_cycles!(72_000_000);
+            //rtt_print!("IDLE");
+            //use crate::pac::DWT;
+            //busy_wait_cycles!(72_000_000);
+            usb::usb_interrupt();
         }
     }
 

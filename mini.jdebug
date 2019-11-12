@@ -12,16 +12,16 @@ void OnProjectLoad (void) {
   //
   // Dialog-generated settings
   //
-  Project.SetDevice ("STM32l4R9ZG");
+  Project.SetDevice ("STM32l4R9ZI");
   Project.SetHostIF ("USB", "");
   Project.SetTargetIF ("JTAG");
   Project.SetTIFSpeed ("500 kHz");
-  Project.AddSvdFile ("$(InstallDir)/Config/CPU/Cortex-M3.svd");
-  Project.AddSvdFile ("$(InstallDir)/Config/Peripherals/STM32F103xx.svd");
+  Project.AddSvdFile ("$(InstallDir)/Config/CPU/Cortex-M4.svd");
+  Project.AddSvdFile ("$(ProjectDir)/svd/STM32L4R9.svd");
   //
   // User settings
   //
-  File.Open ("$(ProjectDir)/target/thumbv7m-none-eabi/debug/m4mon8");
+  File.Open ("$(ProjectDir)/target/thumbv7em-none-eabi/debug/m4mon8");
 }
 
 /*********************************************************************
