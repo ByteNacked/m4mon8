@@ -86,11 +86,10 @@ const APP: () = {
         #[init(AtomicI32::new(0))]
         shared: AtomicI32,
         //rtc : stm32l4xx_hal::rtc::Rtc,
-        g_task : DynBox<dyn Generator<Yield = u32, Return = !>, [usize; 0x10]>,
     }
 
     #[init]
-    fn init(_: init::Context) -> init::LateResources {
+    fn init(_: init::Context) /*-> init::LateResources*/ {
 
         let cp = cortex_m::Peripherals::take().unwrap();
         let dp = pac::Peripherals::take().unwrap();
@@ -101,7 +100,7 @@ const APP: () = {
             .hsi48(true)
             .freeze(&mut flash.acr);
 
-        usb::usb_init(&clocks);
+        //usb::usb_init(&clocks);
 
         ////let mut nvic = cp.NVIC;
 
@@ -117,19 +116,9 @@ const APP: () = {
         rtfm::pend(Interrupt::USART1);
         rtfm::pend(Interrupt::USART2);
 
-        let gen = || {
-            loop {
-                yield 0u32;
-                yield 1;
-                yield 2;
-            }
-        };
-        let g_task = DynBox::new(gen,[0usize;0x10]);
-
-        init::LateResources {
-            //rtc,
-            g_task,
-        }
+        //init::LateResources {
+        //    //rtc,
+        //}
     }
 
     // `shared` cannot be accessed from this context
@@ -137,10 +126,10 @@ const APP: () = {
     fn idle(_cx: idle::Context) -> ! {
 
         loop {
-            //rtt_print!("IDLE");
+            rtt_print!("IDLE");
             //use crate::pac::DWT;
             //busy_wait_cycles!(72_000_000);
-            usb::usb_interrupt();
+            //usb::usb_interrupt();
         }
     }
 
@@ -162,39 +151,11 @@ const APP: () = {
 
     #[task(binds = RTC_WKUP, resources = [&shared/*, rtc*/], priority = 1)]
     fn rtc(cx: rtc::Context) {
-        static mut G_TASK : DynBox<dyn Generator<Yield = u32, Return = !>, [usize; 0x10]> = DynBox::empty([0usize;0x10]);
-        static mut G_RESET : bool = true;
 
         //cx.resources.rtc.clear_second_flag();
         cx.resources.shared.fetch_add(1, Ordering::Relaxed); 
 
-        if *G_RESET {
-            G_TASK.occupy( || {
-                loop {
-                    rtt_print!("Yield 0");
-                    yield 0u32;
-                    rtt_print!("Yield 1");
-                    yield 1;
-                    rtt_print!("Yield 2");
-                    yield 2;
-                }
-            });
-            *G_RESET = false;
-        }
-
-        use core::ops::DerefMut;
-        use core::pin::Pin;
-
-        //rtt_print!("RTC: {}", cx.resources.shared.load(Ordering::Relaxed));
-        //rtt_print!("cb: {:?}", &G_TASK);
-
-        let gen = G_TASK.deref_mut();
-        unsafe {
-            match Pin::new_unchecked(gen).resume() {
-                    GeneratorState::Yielded(num) => { rtt_print!("Step : {}", num); }
-                    GeneratorState::Complete(_)  => { rtt_print!("Finish step!"); }
-            };
-        }
+        rtt_print!("RTC_WKUP");
     }
 };
 
